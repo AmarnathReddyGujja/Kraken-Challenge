@@ -1,0 +1,116 @@
+{% extends 'meter_readings/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>File: {{ flow_file.filename }}</h2>
+    <div>
+        <a href="{% url 'file_list' %}" class="btn btn-secondary">Back to Files</a>
+        <a href="{% url 'file_delete' flow_file.pk %}" class="btn btn-danger">Delete</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>File Information</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th>Filename:</th>
+                        <td>{{ flow_file.filename }}</td>
+                    </tr>
+                    <tr>
+                        <th>File Type:</th>
+                        <td>{{ flow_file.file_type }}</td>
+                    </tr>
+                    <tr>
+                        <th>Import Date:</th>
+                        <td>{{ flow_file.import_date|date:"M d, Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Records:</th>
+                        <td>{{ flow_file.record_count }}</td>
+                    </tr>
+                    <tr>
+                        <th>Status:</th>
+                        <td><span class="badge bg-success">{{ flow_file.status }}</span></td>
+                    </tr>
+                    {% if flow_file.sequence_number %}
+                    <tr>
+                        <th>Sequence Number:</th>
+                        <td>{{ flow_file.sequence_number }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if flow_file.sender %}
+                    <tr>
+                        <th>Sender:</th>
+                        <td>{{ flow_file.sender }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Meters ({{ meters.count }})</h5>
+            </div>
+            <div class="card-body">
+                {% if meters %}
+                    <div class="list-group">
+                        {% for meter in meters %}
+                            <div class="list-group-item">
+                                <strong>{{ meter.serial_number }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    MPAN: {{ meter.mpan }} | 
+                                    Type: {{ meter.get_meter_type_display }}
+                                </small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No meters found in this file.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Readings ({{ readings.count }})</h5>
+            </div>
+            <div class="card-body">
+                {% if readings %}
+                    <div class="list-group">
+                        {% for reading in readings|slice:":10" %}
+                            <div class="list-group-item">
+                                <strong>{{ reading.meter.serial_number }}</strong> - {{ reading.register_id }}
+                                <br>
+                                <small class="text-muted">
+                                    Date: {{ reading.reading_date|date:"M d, Y" }} | 
+                                    Value: {{ reading.reading_value }}
+                                </small>
+                            </div>
+                        {% endfor %}
+                        {% if readings.count > 10 %}
+                            <div class="list-group-item text-center text-muted">
+                                ... and {{ readings.count|add:"-10" }} more readings
+                            </div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No readings found in this file.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

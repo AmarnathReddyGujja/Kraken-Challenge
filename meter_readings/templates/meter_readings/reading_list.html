@@ -1,0 +1,88 @@
+{% extends 'meter_readings/base.html' %}
+
+{% block content %}
+<h2 class="mb-4">Readings</h2>
+
+<!-- Search Form -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="mpan" class="form-label">MPAN</label>
+                <input type="text" class="form-control" id="mpan" name="mpan" value="{{ request.GET.mpan }}" placeholder="Search by MPAN...">
+            </div>
+            <div class="col-md-4">
+                <label for="serial" class="form-label">Meter Serial</label>
+                <input type="text" class="form-control" id="serial" name="serial" value="{{ request.GET.serial }}" placeholder="Search by serial...">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">&nbsp;</label>
+                <div>
+                    <button type="submit" class="btn btn-primary">Search</button>
+                    <a href="{% url 'reading_list' %}" class="btn btn-secondary">Clear</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if readings %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Meter Serial</th>
+                    <th>MPAN</th>
+                    <th>Register</th>
+                    <th>Reading Date</th>
+                    <th>Reading Value</th>
+                    <th>Flow File</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reading in readings %}
+                <tr>
+                    <td>{{ reading.meter.serial_number }}</td>
+                    <td>{{ reading.meter.mpan }}</td>
+                    <td>{{ reading.register_id }}</td>
+                    <td>{{ reading.reading_date|date:"M d, Y H:i" }}</td>
+                    <td>{{ reading.reading_value }}</td>
+                    <td>
+                        <a href="{% url 'file_detail' reading.flow_file.pk %}">{{ reading.flow_file.filename }}</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if is_paginated %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.mpan %}&mpan={{ request.GET.mpan }}{% endif %}{% if request.GET.serial %}&serial={{ request.GET.serial }}{% endif %}">Previous</a>
+                    </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}{% if request.GET.mpan %}&mpan={{ request.GET.mpan }}{% endif %}{% if request.GET.serial %}&serial={{ request.GET.serial }}{% endif %}">{{ num }}</a>
+                    </li>
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.mpan %}&mpan={{ request.GET.mpan }}{% endif %}{% if request.GET.serial %}&serial={{ request.GET.serial }}{% endif %}">Next</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+{% else %}
+    <div class="alert alert-info">
+        No readings found. 
+        <a href="{% url 'home' %}">Upload a flow file</a> to get started.
+    </div>
+{% endif %}
+{% endblock %}

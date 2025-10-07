@@ -1,0 +1,84 @@
+{% extends 'meter_readings/base.html' %}
+
+{% block content %}
+<h2 class="mb-4">Advanced Search</h2>
+
+<!-- Search Form -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5>Search Criteria</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="mpan" class="form-label">MPAN</label>
+                <input type="text" class="form-control" id="mpan" name="mpan" value="{{ search_params.mpan }}" placeholder="Enter MPAN...">
+            </div>
+            <div class="col-md-4">
+                <label for="serial" class="form-label">Meter Serial Number</label>
+                <input type="text" class="form-control" id="serial" name="serial" value="{{ search_params.serial }}" placeholder="Enter serial number...">
+            </div>
+            <div class="col-md-4">
+                <label for="register_id" class="form-label">Register ID</label>
+                <input type="text" class="form-control" id="register_id" name="register_id" value="{{ search_params.register_id }}" placeholder="Enter register ID...">
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Search</button>
+                <a href="{% url 'search_readings' %}" class="btn btn-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Results -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5>Search Results</h5>
+        <span class="badge bg-primary">{{ readings.count }} reading(s) found</span>
+    </div>
+    <div class="card-body">
+        {% if readings %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Meter Serial</th>
+                            <th>MPAN</th>
+                            <th>Register</th>
+                            <th>Reading Date</th>
+                            <th>Reading Value</th>
+                            <th>Type</th>
+                            <th>Flow File</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reading in readings %}
+                        <tr>
+                            <td>{{ reading.meter.serial_number }}</td>
+                            <td>{{ reading.meter.mpan }}</td>
+                            <td>{{ reading.register_id }}</td>
+                            <td>{{ reading.reading_date|date:"M d, Y H:i" }}</td>
+                            <td>{{ reading.reading_value }}</td>
+                            <td>{{ reading.reading_type }}</td>
+                            <td>
+                                <a href="{% url 'file_detail' reading.flow_file.pk %}">{{ reading.flow_file.filename }}</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            {% if search_params %}
+                <div class="alert alert-warning">
+                    No readings found matching your search criteria.
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    Use the form above to search for readings.
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

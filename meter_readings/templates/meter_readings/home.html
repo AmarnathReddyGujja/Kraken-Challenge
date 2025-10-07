@@ -1,0 +1,85 @@
+{% extends 'meter_readings/base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>Upload Flow File</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ form.file.label_tag }}
+                        {{ form.file }}
+                        {% if form.file.errors %}
+                            <div class="text-danger">{{ form.file.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">{{ form.file.help_text }}</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload and Process</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4>Recent Files</h4>
+            </div>
+            <div class="card-body">
+                {% if recent_files %}
+                    <div class="list-group">
+                        {% for file in recent_files %}
+                            <a href="{% url 'file_detail' file.pk %}" class="list-group-item list-group-item-action">
+                                {{ file.filename }} 
+                                <small class="text-muted">({{ file.import_date|date:"M d, Y H:i" }})</small>
+                                <span class="badge bg-secondary float-end">{{ file.record_count }} records</span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No files processed yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h4>Statistics</h4>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Flow Files</span>
+                        <span class="badge bg-primary">{{ stats.total_files }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Meters</span>
+                        <span class="badge bg-info">{{ stats.total_meters }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Readings</span>
+                        <span class="badge bg-warning">{{ stats.total_readings }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4>Quick Actions</h4>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'file_list' %}" class="btn btn-outline-primary">View All Files</a>
+                    <a href="{% url 'search_readings' %}" class="btn btn-outline-success">Search Readings</a>
+                    <a href="/admin/" class="btn btn-outline-dark">Admin Panel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
