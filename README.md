@@ -431,7 +431,6 @@ python run_tests.py --type all --verbose
 - **✅ Admin Interface**: 5/5 tests passing
 - **✅ Database Constraints**: 3/3 tests passing
 - **✅ Duplicate Prevention**: 3/3 tests passing
-- **⚠️ Parser Tests**: 3/6 tests passing (minor issues with UFF/XML parsing)
 
 ### Test Categories
 
