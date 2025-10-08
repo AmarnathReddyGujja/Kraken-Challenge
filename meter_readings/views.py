@@ -1,3 +1,14 @@
+"""
+Django views for the Meter Reading Import System.
+
+This module provides web interface views for:
+- File upload and processing
+- Data browsing and searching
+- Administrative operations
+
+All views include proper error handling and user feedback.
+"""
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, DeleteView
@@ -9,14 +20,28 @@ from .universal_parser import UniversalParser
 import tempfile
 import os
 
+
 def home(request):
-    """Home page with upload form and recent files"""
+    """
+    Home page with file upload form and system statistics.
+    
+    Handles both GET (display form) and POST (process upload) requests.
+    Uses temporary files to safely process uploaded files without
+    storing them permanently on the server.
+    
+    Args:
+        request: Django HttpRequest object
+        
+    Returns:
+        HttpResponse: Rendered home page with form and statistics
+    """
     if request.method == 'POST':
         form = FlowFileUploadForm(request.POST, request.FILES)
         if form.is_valid():
             uploaded_file = request.FILES['file']
             
             # Save uploaded file to temporary location with original extension
+            # This preserves the file type for proper parsing
             original_ext = os.path.splitext(uploaded_file.name)[1] or '.txt'
             with tempfile.NamedTemporaryFile(delete=False, suffix=original_ext) as tmp_file:
                 for chunk in uploaded_file.chunks():
@@ -24,7 +49,8 @@ def home(request):
                 tmp_path = tmp_file.name
             
             try:
-                # Parse and import the file
+                # Parse and import the file using the universal parser
+                # This automatically detects file type and uses appropriate parser
                 parser = UniversalParser()
                 result = parser.parse_file(tmp_path, original_filename=uploaded_file.name)
                 
@@ -52,12 +78,13 @@ def home(request):
             except Exception as e:
                 messages.error(request, f'Error processing file: {str(e)}')
             finally:
-                # Clean up temporary file
+                # Clean up temporary file to prevent disk space issues
                 if os.path.exists(tmp_path):
                     os.unlink(tmp_path)
     else:
         form = FlowFileUploadForm()
     
+    # Get recent files and system statistics for display
     recent_files = FlowFile.objects.all().order_by('-import_date')[:5]
     stats = {
         'total_files': FlowFile.objects.count(),
@@ -72,55 +99,93 @@ def home(request):
     })
 
 class FlowFileListView(ListView):
+    """
+    List view for displaying all imported flow files.
+    
+    Shows files in reverse chronological order (newest first) with pagination
+    for better performance when dealing with many files.
+    """
     model = FlowFile
     template_name = 'meter_readings/flowfile_list.html'
     context_object_name = 'files'
     paginate_by = 10
     ordering = ['-import_date']
 
+
 class FlowFileDetailView(DetailView):
+    """
+    Detail view for displaying a specific flow file and its associated data.
+    
+    Shows file metadata, all meters imported from this file, and all readings
+    associated with those meters. Provides a comprehensive view of the
+    import results.
+    """
     model = FlowFile
     template_name = 'meter_readings/flowfile_detail.html'
     context_object_name = 'flow_file'
     
     def get_object(self, queryset=None):
+        """Get the flow file object, ensuring it exists."""
         pk = self.kwargs.get('pk')
         return get_object_or_404(FlowFile, pk=pk)
     
     def get_context_data(self, **kwargs):
+        """Add related meters and readings to the context."""
         context = super().get_context_data(**kwargs)
         context['meters'] = Meter.objects.filter(flow_file=self.object)
         context['readings'] = RegisterReading.objects.filter(flow_file=self.object)
         return context
 class FlowFileDeleteView(DeleteView):
+    """
+    Delete view for removing flow files and all associated data.
+    
+    Provides a confirmation page before deletion and cascades the delete
+    to remove all associated meters and readings. Shows success message
+    after successful deletion.
+    """
     model = FlowFile
     template_name = 'meter_readings/flowfile_confirm_delete.html'
     success_url = reverse_lazy('file_list')
     success_message = "File and all associated data were deleted successfully"
     
     def get_object(self, queryset=None):
-        """Get the object and ensure it exists"""
+        """Get the object and ensure it exists."""
         pk = self.kwargs.get('pk')
         return get_object_or_404(FlowFile, pk=pk)
     
     def get_context_data(self, **kwargs):
-        """Add flow_file to context for template"""
+        """Add flow_file to context for template."""
         context = super().get_context_data(**kwargs)
         context['flow_file'] = self.object  # Ensure flow_file is in context
         return context
     
     def delete(self, request, *args, **kwargs):
+        """Override delete to show success message."""
         messages.success(self.request, self.success_message)
         return super().delete(request, *args, **kwargs)
 
+
 class MeterListView(ListView):
+    """
+    List view for displaying all meters in the system.
+    
+    Shows meters ordered by serial number with pagination for better
+    performance when dealing with many meters.
+    """
     model = Meter
     template_name = 'meter_readings/meter_list.html'
     context_object_name = 'meters'
     paginate_by = 20
     ordering = ['serial_number']
 
+
 class ReadingListView(ListView):
+    """
+    List view for displaying meter readings with optional filtering.
+    
+    Supports filtering by MPAN and meter serial number via URL parameters.
+    Results are ordered by reading date (newest first) with pagination.
+    """
     model = RegisterReading
     template_name = 'meter_readings/reading_list.html'
     context_object_name = 'readings'
@@ -128,6 +193,13 @@ class ReadingListView(ListView):
     ordering = ['-reading_date']
     
     def get_queryset(self):
+        """
+        Filter readings based on URL parameters.
+        
+        Supports filtering by:
+        - mpan: Filter by Meter Point Administration Number
+        - serial: Filter by meter serial number
+        """
         queryset = super().get_queryset()
         
         # Filter by MPAN if provided
@@ -142,8 +214,24 @@ class ReadingListView(ListView):
         
         return queryset
 
+
 def search_readings(request):
-    """Advanced search for readings"""
+    """
+    Advanced search interface for meter readings.
+    
+    Provides a search form and displays results based on multiple criteria:
+    - MPAN (Meter Point Administration Number)
+    - Meter serial number
+    - Register ID
+    
+    Results are limited to 100 records for performance.
+    
+    Args:
+        request: Django HttpRequest object
+        
+    Returns:
+        HttpResponse: Rendered search page with results
+    """
     readings = RegisterReading.objects.all()
     
     if request.method == 'GET':
@@ -151,6 +239,7 @@ def search_readings(request):
         serial = request.GET.get('serial')
         register_id = request.GET.get('register_id')
         
+        # Apply filters based on search parameters
         if mpan:
             readings = readings.filter(meter__mpan__icontains=mpan)
         if serial:
@@ -159,6 +248,6 @@ def search_readings(request):
             readings = readings.filter(register_id__icontains=register_id)
     
     return render(request, 'meter_readings/search.html', {
-        'readings': readings.order_by('-reading_date')[:100],  # Limit results
+        'readings': readings.order_by('-reading_date')[:100],  # Limit results for performance
         'search_params': request.GET
     })

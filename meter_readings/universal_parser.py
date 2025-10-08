@@ -1,3 +1,23 @@
+"""
+Universal Parser for Meter Reading Import System.
+
+This module provides a comprehensive file parser that can automatically detect
+and process multiple file formats including UFF (D0010), PDF, CSV, JSON, XML,
+TXT, Excel, and Word documents.
+
+The parser implements intelligent file type detection and uses appropriate
+specialized parsers for each format while maintaining consistent data models
+and duplicate prevention across all formats.
+
+Key Features:
+- Automatic file type detection based on content and extension
+- Support for 8+ file formats
+- Robust error handling and logging
+- Duplicate prevention using checksums
+- Industry standard compliance (D0010)
+- PDF text extraction with UFF format detection
+"""
+
 import os
 import hashlib
 import logging
@@ -11,10 +31,29 @@ from .models import FlowFile, Meter, RegisterReading
 
 logger = logging.getLogger(__name__)
 
+
 class UniversalParser:
-    """Universal parser that can handle multiple file formats"""
+    """
+    Universal parser that can handle multiple file formats automatically.
+    
+    This parser provides a unified interface for importing meter reading data
+    from various file formats. It automatically detects the file type and
+    uses the appropriate parsing strategy while maintaining data integrity
+    and preventing duplicates.
+    
+    Supported formats:
+    - UFF (D0010 standard) - Primary format
+    - PDF - With UFF content detection
+    - CSV - Comma-separated values
+    - JSON - JavaScript Object Notation
+    - XML - Extensible Markup Language
+    - TXT - Plain text files
+    - Excel - .xlsx and .xls files
+    - Word - .docx and .doc files
+    """
     
     def __init__(self):
+        """Initialize the parser with empty statistics."""
         self.stats = {
             'meters_created': 0,
             'readings_created': 0,
