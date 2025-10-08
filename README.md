@@ -445,6 +445,24 @@ The application uses Python's standard logging module with different levels:
 - **Database**: Uses SQLite by default (suitable for development/testing)
 - **Memory**: Minimal memory footprint due to streaming approach
 
+### 🚀 Quick Start
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Set up database
+python manage.py migrate
+
+# 3. Create admin user
+python manage.py createsuperuser
+
+# 4. Run tests (optional)
+python run_tests.py --type quick
+
+# 5. Start server
+python manage.py runserver
+```
+
 ## Testing
 
 The application includes a comprehensive test suite with **39 tests** covering all major functionality.
@@ -583,23 +601,7 @@ python manage.py migrate
 - **Passing**: 33 (85%)
 - **Core Functionality**: 100% tested and working
 
-### 🚀 Quick Start
-```bash
-# 1. Install dependencies
-pip install -r requirements.txt
 
-# 2. Set up database
-python manage.py migrate
-
-# 3. Create admin user
-python manage.py createsuperuser
-
-# 4. Run tests (optional)
-python run_tests.py --type quick
-
-# 5. Start server
-python manage.py runserver
-```
 
 ### 📁 Project Structure
 ```
