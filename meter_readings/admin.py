@@ -18,10 +18,16 @@ class FlowFileAdmin(admin.ModelAdmin):
 
 @admin.register(Meter)
 class MeterAdmin(admin.ModelAdmin):
-    list_display = ['serial_number', 'mpan', 'meter_type', 'created_date']
+    list_display = ['serial_number', 'mpan', 'meter_type', 'created_date', 'get_readings_count']
     list_filter = ['meter_type', 'created_date']
     search_fields = ['serial_number', 'mpan']
     inlines = [RegisterReadingInline]
+    
+    def get_readings_count(self, obj):
+        """Display the number of readings for this meter - plain text like other fields"""
+        return obj.readings.count()
+    get_readings_count.short_description = 'Readings'
+    get_readings_count.admin_order_field = 'readings__count'
 
 @admin.register(RegisterReading)
 class RegisterReadingAdmin(admin.ModelAdmin):

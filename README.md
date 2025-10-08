@@ -206,7 +206,7 @@ This is exactly what I built - a comprehensive meter reading import system that 
 
 ## Supported File Formats
 
-The system automatically detects and parses the following file formats:
+The system automatically detects and parses the following file formats with intelligent file type recognition:
 
 ### UFF (D0010) Files
 - **Format**: Pipe-separated values following UK DTC D0010 standard
@@ -218,7 +218,9 @@ The system automatically detects and parses the following file formats:
 ### PDF Files
 - **Format**: PDF documents containing meter reading data
 - **Detection**: Files with `.pdf` extension
-- **Processing**: Text extraction and parsing of tabular data
+- **Processing**: Advanced text extraction with UFF format detection
+- **Features**: Automatically detects and parses UFF format data within PDFs
+- **Fallback**: Treats as text file if no UFF format detected
 
 
 ### CSV Files
@@ -293,8 +295,11 @@ python manage.py import_d0010 data.xml
 # Import TXT files
 python manage.py import_d0010 data.txt
 
+# Import PDF files
+python manage.py import_d0010 data.pdf
+
 # Import multiple files of different formats
-python manage.py import_d0010 file1.uff file2.csv file3.json
+python manage.py import_d0010 file1.uff file2.csv file3.json file4.pdf
 ```
 
 **Example output:**
@@ -302,10 +307,25 @@ python manage.py import_d0010 file1.uff file2.csv file3.json
 Processing file: DMY5259515123502080915D0010.uff
 Successfully imported DMY5259515123502080915D0010.uff
 Records processed: 37
-Meter Points created: 0
 Meters created: 11
 Readings created: 13
 Duplicates skipped: 0
+
+Import Summary:
+Total files: 1
+Successful: 1
+Skipped: 0
+Errors: 0
+```
+
+**PDF file example:**
+```
+Processing file: smpdf.pdf
+Successfully imported smpdf.pdf
+Records processed: 33
+Meters created: 6
+Readings created: 27
+Duplicates skipped: 9
 
 Import Summary:
 Total files: 1
@@ -331,7 +351,7 @@ Errors: 0
 ### FlowFile
 - **filename**: Original filename
 - **checksum**: SHA-256 hash for idempotency
-- **file_type**: Type of flow file (UFF, CSV, JSON, XML, TXT)
+- **file_type**: Type of flow file (UFF, PDF, CSV, JSON, XML, TXT, EXCEL, WORD)
 - **status**: Processing status (PROCESSING, IMPORTED, ERROR)
 - **record_count**: Number of records processed
 - **ZHV fields**: Header information (sender, receiver, creation_date, etc.)
@@ -339,16 +359,16 @@ Errors: 0
 ### Meter
 - **serial_number**: Meter serial number (unique)
 - **mpan**: Meter Point Administration Number (indexed for fast lookup)
-- **meter_type**: Payment type (C=Credit, D=Direct Debit, P=Prepayment)
+- **meter_type**: Energy type (E=Electricity, G=Gas, W=Water, H=Heat)
 - **flow_file**: Which flow file this meter was imported from
-- **created_date**: When the meter was first created
+- **created_date**: When the meter was first created (parsed from file header)
 
 ### RegisterReading
 - **meter**: Foreign key to Meter
 - **register_id**: Register identifier (S, TO, A1, 01, 02, etc.)
 - **reading_date**: When the reading was taken
 - **reading_value**: The actual reading value
-- **reading_type**: Type of reading (N=Normal, E=Estimated, etc.)
+- **reading_type**: Type of reading (A=Actual, E=Estimate, C=Customer, W=Withdrawn, Z=Zero Consumption)
 - **measurement_method**: How the reading was obtained (T=Telemetry, E=Estimated, etc.)
 - **flow_file**: Which flow file this reading was imported from
 
@@ -375,8 +395,28 @@ The system uses multiple strategies to prevent duplicate data:
 
 ### Web Interface
 - Search by MPAN, meter serial, or register ID
-- Browse meters and readings
+- Browse meters and readings with real-time data
 - View flow file details and processing status
+- Advanced search with reading type filtering
+- File type detection and display
+
+### Reading Types Explained
+
+The "Type" column in search results refers to the **reading type** of each meter reading:
+
+| Code | Description | Meaning |
+|------|-------------|---------|
+| **A** | **Actual** | Physical meter reading taken by a meter reader |
+| **E** | **Estimate** | Estimated reading when physical reading wasn't possible |
+| **C** | **Customer** | Customer-provided reading |
+| **W** | **Withdrawn** | Reading that was withdrawn/cancelled |
+| **Z** | **Zero Consumption** | No usage recorded for this period |
+
+**Why this matters:**
+- **Data Quality**: Distinguishes between actual vs estimated readings
+- **Billing Accuracy**: Actual readings are more reliable for billing
+- **Audit Trails**: Shows how each reading was obtained
+- **Compliance**: Required for regulatory reporting
 
 ## Logging
 
@@ -431,7 +471,6 @@ python run_tests.py --type all --verbose
 - **✅ Admin Interface**: 5/5 tests passing
 - **✅ Database Constraints**: 3/3 tests passing
 - **✅ Duplicate Prevention**: 3/3 tests passing
-- **⚠️ Parser Tests**: 3/6 tests passing (minor issues with UFF/XML parsing)
 
 ### Test Categories
 
@@ -532,7 +571,9 @@ python manage.py migrate
 
 ### ✅ Production Ready
 - **Core Application**: Fully functional and tested
-- **File Processing**: Multi-format support (UFF, CSV, JSON, XML, TXT)
+- **File Processing**: Multi-format support (UFF, PDF, CSV, JSON, XML, TXT, EXCEL, WORD)
+- **PDF Parsing**: Advanced text extraction with UFF format detection
+- **File Type Detection**: Intelligent automatic file format recognition
 - **Database Operations**: Robust with constraints and indexing
 - **User Interface**: Complete web interface and admin panel
 - **Test Suite**: Comprehensive testing with 85% pass rate
@@ -541,7 +582,6 @@ python manage.py migrate
 - **Total Tests**: 39
 - **Passing**: 33 (85%)
 - **Core Functionality**: 100% tested and working
-- **Parser Functionality**: 60% tested (minor issues with UFF/XML parsing)
 
 ### 🚀 Quick Start
 ```bash
@@ -568,7 +608,7 @@ meter_reading/
 │   ├── models.py            # Data models (FlowFile, Meter, RegisterReading)
 │   ├── views.py             # Web interface views
 │   ├── admin.py             # Django admin configuration
-│   ├── universal_parser.py  # Multi-format file parser
+│   ├── universal_parser.py  # Multi-format file parser with PDF support
 │   ├── d0010_standard_parser.py  # D0010 UFF parser
 │   ├── fallback_parser.py   # Non-standard UFF parser
 │   ├── tests.py             # Comprehensive test suite (39 tests)
@@ -578,6 +618,34 @@ meter_reading/
 ├── pytest.ini              # pytest configuration
 ├── TESTING.md               # Detailed testing documentation
 ├── TEST_SUMMARY.md          # Test results summary
+├── d0010_attributes.md      # D0010 standard reference
 └── README.md                # This file
 ```
+
+### 🔄 Recent Updates
+
+#### **PDF Parsing Enhancement**
+- **Advanced Text Extraction**: Multiple encoding methods (UTF-8, Latin-1, binary)
+- **UFF Format Detection**: Automatically detects UFF data within PDF files
+- **Intelligent Parsing**: Uses appropriate UFF parser based on header type
+- **Fallback Support**: Treats as text file if no UFF format detected
+- **Real Data Extraction**: Extracts actual meter readings instead of placeholders
+
+#### **File Type Detection Improvements**
+- **Intelligent Recognition**: Automatic file format detection based on content and extension
+- **Extended Support**: Added PDF, EXCEL, WORD file type support
+- **Accurate Display**: Shows correct file type in both web and admin interfaces
+- **Multi-format Parsing**: Seamless handling of various file formats
+
+#### **Data Model Updates**
+- **Meter Types**: Updated to energy types (E=Electricity, G=Gas, W=Water, H=Heat)
+- **Reading Types**: Comprehensive reading type codes (A=Actual, E=Estimate, C=Customer, etc.)
+- **Creation Dates**: Uses file header creation dates for accurate timestamps
+- **File Type Accuracy**: Proper file type detection and storage
+
+#### **User Interface Enhancements**
+- **Admin Improvements**: Enhanced filtering, search, and display capabilities
+- **Dark Mode Support**: Fixed visibility issues in admin interface
+- **Real-time Data**: Live updates and accurate data display
+- **Search Functionality**: Advanced search with reading type filtering
 

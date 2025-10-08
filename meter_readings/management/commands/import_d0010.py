@@ -35,7 +35,6 @@ class Command(BaseCommand):
                     self.style.SUCCESS(
                         f"Successfully imported {file_path}\n"
                         f"Records processed: {flow_file.record_count}\n"
-                        f"Meter Points created: {stats['meter_points_created']}\n"
                         f"Meters created: {stats['meters_created']}\n"
                         f"Readings created: {stats['readings_created']}\n"
                         f"Duplicates skipped: {stats['duplicates_skipped']}"

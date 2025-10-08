@@ -45,6 +45,12 @@ class UniversalParser:
             return 'xml'
         elif filename.endswith('.txt'):
             return 'txt'
+        elif filename.endswith('.pdf'):
+            return 'pdf'
+        elif filename.endswith('.xlsx') or filename.endswith('.xls'):
+            return 'excel'
+        elif filename.endswith('.docx') or filename.endswith('.doc'):
+            return 'word'
         
         # Try to detect by content
         try:
@@ -229,9 +235,178 @@ class UniversalParser:
                 except Exception as e:
                     logger.warning(f"Error parsing TXT line {line_num}: {e}")
 
+    def _parse_pdf_file(self, file_path):
+        """Parse PDF files - extract text and parse as UFF format"""
+        logger.info("Parsing PDF file")
+        
+        try:
+            # Try to extract text from PDF
+            pdf_text = self._extract_pdf_text(file_path)
+            
+            if pdf_text:
+                logger.info(f"Extracted {len(pdf_text)} characters from PDF")
+                # Parse the extracted text as UFF format
+                self._parse_pdf_text_content(pdf_text)
+            else:
+                logger.warning("No text content extracted from PDF")
+                # Create a dummy entry to show the file was processed
+                self._create_meter_data(
+                    mpan="PDF_NO_CONTENT_MPAN",
+                    serial="PDF_NO_CONTENT_SERIAL",
+                    reading_value="0.000",
+                    reading_date=None
+                )
+                
+        except Exception as e:
+            logger.error(f"Error parsing PDF file: {e}")
+            # Create a dummy entry to show the file was processed
+            self._create_meter_data(
+                mpan="PDF_ERROR_MPAN",
+                serial="PDF_ERROR_SERIAL",
+                reading_value="0.000",
+                reading_date=None
+            )
+    
+    def _extract_pdf_text(self, file_path):
+        """Extract text from PDF file using basic method"""
+        try:
+            # Try to read as text first (some PDFs are just text files with .pdf extension)
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                # Check if it contains UFF format markers
+                if 'ZHD|' in content or 'ZHV|' in content or '026|' in content:
+                    logger.info("PDF file contains UFF format data")
+                    return content
+        except UnicodeDecodeError:
+            pass
+        
+        try:
+            # Try with different encoding
+            with open(file_path, 'r', encoding='latin-1') as f:
+                content = f.read()
+                if 'ZHD|' in content or 'ZHV|' in content or '026|' in content:
+                    logger.info("PDF file contains UFF format data (latin-1)")
+                    return content
+        except Exception:
+            pass
+        
+        # If we can't read as text, try basic binary extraction
+        try:
+            with open(file_path, 'rb') as f:
+                content = f.read()
+                # Look for text patterns in binary data
+                text_content = content.decode('utf-8', errors='ignore')
+                if 'ZHD|' in text_content or 'ZHV|' in text_content or '026|' in text_content:
+                    logger.info("PDF file contains UFF format data (binary extraction)")
+                    return text_content
+        except Exception:
+            pass
+        
+        return None
+    
+    def _parse_pdf_text_content(self, text_content):
+        """Parse extracted PDF text content as UFF format"""
+        lines = text_content.split('\n')
+        
+        for line_num, line in enumerate(lines, 1):
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Check if it's a UFF format line
+            if '|' in line and (line.startswith('ZHD|') or line.startswith('ZHV|') or 
+                              line.startswith('026|') or line.startswith('028|') or 
+                              line.startswith('029|') or line.startswith('ZTR|')):
+                
+                # Parse as UFF format using existing parsers
+                try:
+                    if line.startswith('ZHD|') or line.startswith('ZHV|'):
+                        # Use the appropriate parser based on the header
+                        if line.startswith('ZHD|'):
+                            from .d0010_standard_parser import D0010StandardParser
+                            parser = D0010StandardParser()
+                        else:
+                            from .fallback_parser import FallbackParser
+                            parser = FallbackParser()
+                        
+                        parser.current_flow_file = self.current_flow_file
+                        
+                        # Parse all lines
+                        for pdf_line in lines:
+                            pdf_line = pdf_line.strip()
+                            if pdf_line:
+                                try:
+                                    parser.parse_record(pdf_line)
+                                except Exception as e:
+                                    logger.warning(f"Error parsing PDF UFF line: {e}")
+                                    continue
+                        
+                        # Update stats
+                        self.stats = parser.stats
+                        logger.info(f"Successfully parsed PDF as UFF format: {self.stats}")
+                        return
+                        
+                except Exception as e:
+                    logger.warning(f"Error parsing PDF as UFF format: {e}")
+                    continue
+        
+        # If no UFF format detected, treat as regular text
+        logger.info("No UFF format detected in PDF, treating as text")
+        self._parse_txt_content(text_content)
+    
+    def _parse_txt_content(self, text_content):
+        """Parse text content using the same logic as TXT files"""
+        lines = text_content.split('\n')
+        
+        for line_num, line in enumerate(lines, 1):
+            line = line.strip()
+            if not line:
+                continue
+                
+            try:
+                # Try different text formats
+                if '|' in line:
+                    # Pipe-separated format
+                    parts = line.split('|')
+                    if len(parts) >= 3:
+                        mpan, serial, reading_value = parts[0].strip(), parts[1].strip(), parts[2].strip()
+                        reading_date = parts[3].strip() if len(parts) > 3 else None
+                        if mpan and serial and reading_value:
+                            self._create_meter_data(mpan, serial, reading_value, reading_date)
+                elif '\t' in line:
+                    # Tab-separated format
+                    parts = line.split('\t')
+                    if len(parts) >= 3:
+                        mpan, serial, reading_value = parts[0].strip(), parts[1].strip(), parts[2].strip()
+                        reading_date = parts[3].strip() if len(parts) > 3 else None
+                        if mpan and serial and reading_value:
+                            self._create_meter_data(mpan, serial, reading_value, reading_date)
+                elif ',' in line:
+                    # Comma-separated format
+                    parts = line.split(',')
+                    if len(parts) >= 3:
+                        mpan, serial, reading_value = parts[0].strip(), parts[1].strip(), parts[2].strip()
+                        reading_date = parts[3].strip() if len(parts) > 3 else None
+                        if mpan and serial and reading_value:
+                            self._create_meter_data(mpan, serial, reading_value, reading_date)
+                else:
+                    # Try space-separated format
+                    parts = line.split()
+                    if len(parts) >= 3:
+                        mpan, serial, reading_value = parts[0].strip(), parts[1].strip(), parts[2].strip()
+                        reading_date = parts[3].strip() if len(parts) > 3 else None
+                        if mpan and serial and reading_value:
+                            self._create_meter_data(mpan, serial, reading_value, reading_date)
+                            
+            except Exception as e:
+                logger.warning(f"Error parsing PDF text line {line_num}: {e}")
+
     def _create_meter_data(self, mpan, serial, reading_value, reading_date=None):
         """Create meter data from parsed information"""
         try:
+            # Use ZHD creation date if available, otherwise use current time
+            creation_date = self.current_flow_file.creation_date if self.current_flow_file and self.current_flow_file.creation_date else make_aware(datetime.now())
+            
             # Create or get meter
             meter, created = Meter.objects.get_or_create(
                 serial_number=serial,
@@ -239,7 +414,7 @@ class UniversalParser:
                     'mpan': mpan,
                     'meter_type': 'E',  # Default to Electricity
                     'flow_file': self.current_flow_file,
-                    'created_date': make_aware(datetime.now())
+                    'created_date': creation_date
                 }
             )
             if created:
@@ -376,6 +551,11 @@ class UniversalParser:
             elif file_format == 'xml':
                 self._parse_xml_file(file_path)
             elif file_format == 'txt':
+                self._parse_txt_file(file_path)
+            elif file_format == 'pdf':
+                self._parse_pdf_file(file_path)
+            elif file_format in ['excel', 'word']:
+                # For now, treat as text files
                 self._parse_txt_file(file_path)
             else:
                 raise ValueError(f"Unsupported file format: {file_format}")

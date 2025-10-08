@@ -169,7 +169,7 @@ class D0010Parser:
         logger.debug("Parsing 028 record")
         if len(fields) >= 2 and self.current_mpan:
             serial_number = fields[1].strip()
-            meter_type = fields[2] if len(fields) > 2 else 'C'
+            meter_type = fields[2] if len(fields) > 2 else 'E'
             
             if not serial_number:
                 logger.warning("Empty serial number, skipping")

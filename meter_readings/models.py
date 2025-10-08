@@ -29,14 +29,15 @@ class FlowFile(models.Model):
 
 class Meter(models.Model):
     METER_TYPES = [
-        ('C', 'Credit'),
-        ('D', 'Direct Debit'),
-        ('P', 'Prepayment'),
+        ('E', 'Electricity'),
+        ('G', 'Gas'),
+        ('W', 'Water'),
+        ('H', 'Heat'),
     ]
     
     serial_number = models.CharField(max_length=50, unique=True, db_index=True)
     mpan = models.CharField(max_length=20, db_index=True, help_text='Meter Point Administration Number', default='0000000000000')
-    meter_type = models.CharField(max_length=1, choices=METER_TYPES)
+    meter_type = models.CharField(max_length=1, choices=METER_TYPES, default='E')
     flow_file = models.ForeignKey(FlowFile, on_delete=models.CASCADE)
     created_date = models.DateTimeField(default=timezone.now)
     

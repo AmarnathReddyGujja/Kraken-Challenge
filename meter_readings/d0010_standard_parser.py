@@ -113,13 +113,16 @@ class D0010StandardParser:
             return
         
         # Create or get meter
+        # Use ZHD creation date if available, otherwise use current time
+        creation_date = self.current_flow_file.creation_date if self.current_flow_file and self.current_flow_file.creation_date else make_aware(datetime.now())
+        
         meter, created = Meter.objects.get_or_create(
             serial_number=meter_serial,
             defaults={
                 'mpan': self.current_mpan,
                 'meter_type': 'E',  # Default to Electricity
                 'flow_file': self.current_flow_file,
-                'created_date': make_aware(datetime.now())
+                'created_date': creation_date
             }
         )
         if created:

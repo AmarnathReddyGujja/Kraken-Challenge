@@ -41,8 +41,7 @@ class FallbackParser:
         version = fields[2] if len(fields) > 2 else ""
         from_role = fields[3] if len(fields) > 3 else ""
         to_role = fields[4] if len(fields) > 4 else ""
-        creation_date = fields[5] if len(fields) > 5 else ""
-        creation_time = fields[6] if len(fields) > 6 else ""
+        creation_datetime = fields[7] if len(fields) > 7 else ""  # Combined date/time in position 7
         
         logger.info(f"ZHV: Flow={flow_ref}, Version={version}, From={from_role}, To={to_role}")
         
@@ -53,14 +52,16 @@ class FallbackParser:
             self.current_flow_file.sender = from_role
             self.current_flow_file.receiver = to_role
             
-            # Parse creation date/time
-            if creation_date and creation_time and creation_date.isdigit() and creation_time.isdigit():
+            # Parse creation date/time (combined format: YYYYMMDDHHMMSS)
+            if creation_datetime and creation_datetime.isdigit() and len(creation_datetime) == 14:
                 try:
-                    date_str = f"{creation_date}{creation_time}"
-                    creation_dt = datetime.strptime(date_str, '%Y%m%d%H%M%S')
+                    creation_dt = datetime.strptime(creation_datetime, '%Y%m%d%H%M%S')
                     self.current_flow_file.creation_date = make_aware(creation_dt)
+                    logger.info(f"Parsed creation date: {creation_dt}")
                 except ValueError as e:
                     logger.warning(f"Error parsing creation date/time: {e}")
+            else:
+                logger.warning(f"Invalid creation datetime format: {creation_datetime}")
 
     def _parse_026_record(self, fields):
         """Parse 026 (MPAN Core) record - simplified for non-standard format"""
@@ -101,13 +102,16 @@ class FallbackParser:
             return
         
         # Create or get meter
+        # Use ZHD creation date if available, otherwise use current time
+        creation_date = self.current_flow_file.creation_date if self.current_flow_file and self.current_flow_file.creation_date else make_aware(datetime.now())
+        
         meter, created = Meter.objects.get_or_create(
             serial_number=meter_serial,
             defaults={
                 'mpan': self.current_mpan,
                 'meter_type': 'E',  # Default to Electricity
                 'flow_file': self.current_flow_file,
-                'created_date': make_aware(datetime.now())
+                'created_date': creation_date
             }
         )
         if created:
