@@ -2,7 +2,81 @@ Name: Amarnath Gujja
 
 # Meter Reading Import System
 
-A Django application for importing and managing meter reading data from multiple file formats. This system provides robust parsing, duplicate prevention, and administrative interfaces for meter data management.
+A Django application for importing and managing D0010 meter reading data from multiple file formats. This system provides robust parsing, duplicate prevention, and administrative interfaces for meter data management.
+
+## 📑 **Table of Contents**
+
+1. [🚀 Quick Start - Get Running in 5 Minutes](#-quick-start---get-running-in-5-minutes)
+2. [📖 What This System Does](#-what-this-system-does-in-simple-terms)
+3. [🛠️ Testing the Setup](#️-testing-the-setup)
+4. [🔧 Troubleshooting](#-troubleshooting)
+5. [📋 Requirements](#-requirements)
+6. [📁 Supported File Formats](#supported-file-formats)
+7. [💻 Usage](#usage)
+8. [🗄️ Data Model](#data-model)
+9. [🔍 Search and Filtering](#search-and-filtering)
+10. [🧪 Testing](#testing)
+11. [📊 Project Status](#project-status)
+12. [🔄 Recent Updates](#-recent-updates)
+
+## 🚀 **Quick Start - Get Running in 5 Minutes**
+
+### **Prerequisites**
+- Python 3.11+ installed on your system
+- Git (if cloning from repository)
+- Command line access (PowerShell, Command Prompt, or Terminal)
+
+### **Step-by-Step Setup**
+
+#### **Step 1: Get the Project**
+```bash
+# Clone from GitHub
+git clone https://github.com/AmarnathReddyGujja/Kraken-Challenge.git
+cd Kraken-Challenge
+
+#### **Step 2: Create Virtual Environment**
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+```
+
+#### **Step 3: Install Dependencies**
+```bash
+pip install -r requirements.txt
+```
+
+#### **Step 4: Set Up Database**
+```bash
+# Create database tables
+python manage.py migrate
+
+# Create admin user (optional but recommended)
+python manage.py createsuperuser
+# Follow prompts to create username, email, and password
+```
+
+#### **Step 5: Run the Server**
+```bash
+python manage.py runserver
+```
+
+#### **Step 6: Access the Application**
+- **Web Interface**: Open `http://127.0.0.1:8000/` in your browser
+- **Admin Interface**: Open `http://127.0.0.1:8000/admin/` in your browser
+
+
+### **✅ Verification Steps**
+1. **Server Running**: `http://127.0.0.1:8000/` loads without errors
+2. **Database Connected**: No database errors in console
+3. **File Upload**: Can upload and process files
+4. **Data Display**: Meters and readings show correctly
+5. **Admin Access**: Can log into admin interface
 
 ## 📖 **What This System Does (In Simple Terms)**
 
@@ -162,47 +236,67 @@ This is exactly what I built - a comprehensive meter reading import system that 
 - **Data Security**: Robust database with proper access controls
 
 
-## Requirements
+## 🛠️ **Testing the Setup**
+
+### **Test 1: Basic Functionality**
+```bash
+# Run quick tests
+python run_tests.py --type quick --verbose
+```
+
+### **Test 2: Import Sample Data**
+```bash
+# Import UFF file
+python manage.py import_d0010 DMY5259515123502080915D0010.uff
+
+# Import PDF file
+python manage.py import_d0010 smpdf.pdf
+```
+
+### **Test 3: Web Interface**
+1. Go to `http://127.0.0.1:8000/`
+2. Upload a file using the web interface
+3. Browse to Files, Meters, or Readings pages
+
+## 🔧 **Troubleshooting**
+
+### **Common Issues & Solutions**
+
+**Issue 1: Python not found**
+```bash
+# Use python3 instead
+python3 manage.py runserver
+```
+
+**Issue 2: Virtual environment activation fails**
+```bash
+# Try different activation method
+.\venv\Scripts\Activate.ps1
+# Or
+venv\Scripts\activate.bat
+```
+
+**Issue 3: Database errors**
+```bash
+# Reset database
+python manage.py flush --noinput
+python manage.py migrate
+```
+
+**Issue 4: Port already in use**
+```bash
+# Use different port
+python manage.py runserver 8001
+```
+
+**Issue 5: Import fails with "file already processed"**
+- Check if file content is identical to previously imported file
+- Use different filename if content is different
+
+## 📋 **Requirements**
 
 - Python 3.11+
 - Django 5.2+
-
-## Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd meter_reading
-   ```
-
-2. **Create and activate virtual environment**
-   ```bash
-   python -m venv venv
-   # On Windows:
-   venv\Scripts\activate
-   # On macOS/Linux:
-   source venv/bin/activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Set up the database**
-   ```bash
-   python manage.py migrate
-   ```
-
-5. **Create superuser account**
-   ```bash
-   python manage.py createsuperuser
-   ```
-
-6. **Start the development server**
-   ```bash
-   python manage.py runserver
-   ```
 
 ## Supported File Formats
 
@@ -445,23 +539,6 @@ The application uses Python's standard logging module with different levels:
 - **Database**: Uses SQLite by default (suitable for development/testing)
 - **Memory**: Minimal memory footprint due to streaming approach
 
-### 🚀 Quick Start
-```bash
-# 1. Install dependencies
-pip install -r requirements.txt
-
-# 2. Set up database
-python manage.py migrate
-
-# 3. Create admin user
-python manage.py createsuperuser
-
-# 4. Run tests (optional)
-python run_tests.py --type quick
-
-# 5. Start server
-python manage.py runserver
-```
 
 ## Testing
 
@@ -563,27 +640,6 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-## Troubleshooting
-
-### Common Issues
-
-1. **Import fails with "file already processed"**
-   - Check if file content is identical to previously imported file
-   - Use different filename if content is different
-
-2. **Database constraint errors**
-   - Ensure unique constraints are respected
-   - Check for duplicate readings with same meter/register/date/value
-
-3. **Logging not visible**
-   - Configure logging level in Django settings
-   - Check log file locations
-
-### Getting Help
-
-- Check Django logs for detailed error messages
-- Use `--verbosity=2` with management commands for detailed output
-- Review admin interface for data validation issues
 
 ## Project Status
 
